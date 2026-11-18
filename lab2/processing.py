@@ -69,7 +69,7 @@ def otsu_threshold(hist: list) -> int:
 
     w0 = 0
     sum0 = 0
-    best_t = 128
+    best_ts = [128]
     max_var = -1.0
 
     for t in range(256):
@@ -87,9 +87,11 @@ def otsu_threshold(hist: list) -> int:
 
         if var > max_var:
             max_var = var
-            best_t = t
+            best_ts = [t]
+        elif abs(var - max_var) < 1e-5:
+            best_ts.append(t)
 
-    return best_t
+    return int(round(sum(best_ts) / len(best_ts)))
 
 
 def iterative_threshold(hist: list, eps: float = 0.5) -> Tuple[int, int]:

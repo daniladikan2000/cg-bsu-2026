@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Алгоритмы отсечения</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-sapphire {
+            background: #0f1d38;
+            border: 1px solid #1e3a8a;
+            color: #dbeafe;
+            transition: all 0.15s ease;
+        }
+        .btn-sapphire:hover, .btn-sapphire.active {
+            background: #1e3a8a;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-emerald {
+            background: #06281e;
+            border: 1px solid #064e3b;
+            color: #d1fae5;
+            transition: all 0.15s ease;
+        }
+        .btn-emerald:hover {
+            background: #064e3b;
+            border-color: #059669;
+            color: #ffffff;
+        }
+
+        .btn-neutral {
+            background: #18181b;
+            border: 1px solid #27272a;
+            color: #a1a1aa;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-neutral:hover, .btn-neutral.active {
+            background: #27272a;
+            border-color: #3f3f46;
+            color: #f4f4f5;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#09090b] text-[#e4e4e7] min-h-screen flex items-center justify-center p-6 font-sans">
+
+    <div class="bg-[#121215] border border-[#202024] rounded-2xl shadow-2xl p-8 max-w-4xl w-full">
+        
+        <h1 class="text-2xl font-medium mb-6 text-center tracking-wide text-[#f4f4f5]">
+            Алгоритмы отсечения
+        </h1>
+
+        <!-- Top Bar: Algorithm & Presets -->
+        <div class="h-[46px] flex items-center justify-between gap-3 mb-6 bg-[#0c0c0e] px-3 rounded-xl border border-[#1e1e22]">
+            
+            <!-- Algorithm Tabs -->
+            <div class="flex items-center gap-1.5">
+                <button onclick="setAlgo('midpoint')" id="btn-algo-midpoint" class="btn-sapphire active h-[30px] px-3 rounded-lg text-xs font-medium">
+                    Средняя точка
+                </button>
+                <button onclick="setAlgo('cyrus_beck')" id="btn-algo-cyrus" class="btn-neutral h-[30px] px-3 rounded-lg text-xs font-medium">
+                    Кирус-Бек
+                </button>
+            </div>
+
+            <!-- Presets & File Upload -->
+            <div class="flex items-center gap-2">
+                <span class="text-[#71717a] text-xs">Образцы:</span>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="loadSample('basic')" id="btn-sample-basic" class="btn-sapphire active h-[30px] px-2.5 rounded-lg text-xs">5 линий</button>
+                    <button onclick="loadSample('star')" id="btn-sample-star" class="btn-neutral h-[30px] px-2.5 rounded-lg text-xs">Звезда</button>
+                    <button onclick="loadSample('hexagon')" id="btn-sample-hex" class="btn-neutral h-[30px] px-2.5 rounded-lg text-xs">Шестиугольник</button>
+                </div>
+                <label class="btn-neutral h-[30px] px-2.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-[#f4f4f5]">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>Файл .txt</span>
+                    <input type="file" id="file-input" class="hidden" accept=".txt" onchange="uploadFile(event)">
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Main Grid: Canvas & Results -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+            
+            <!-- Canvas (7 cols) -->
+            <div class="md:col-span-7 h-[390px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                <span class="text-[#a1a1aa] font-medium uppercase tracking-wider text-[11px]">Координатная плоскость</span>
+
+                <div class="w-full flex-1 my-2 rounded-lg overflow-hidden bg-[#070708] border border-[#18181b]">
+                    <canvas id="canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+                </div>
+
+                <div class="flex items-center gap-4 text-[11px] text-[#71717a] pt-1">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#1e3a8a]/70 border border-[#3b82f6] inline-block"></span> Окно</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 rounded-full bg-[#34d399] inline-block"></span> Видимо</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 border-t border-dashed border-[#ef4444] inline-block"></span> Отсечено</span>
+                </div>
+            </div>
+
+            <!-- Results (5 cols) -->
+            <div class="md:col-span-5 h-[390px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                
+                <div class="flex justify-between items-center text-xs mb-2">
+                    <span class="text-[#a1a1aa] font-medium uppercase tracking-wider text-[11px]">Результаты</span>
+                    <button onclick="toggleEditor()" id="btn-toggle-ed" class="text-[11px] text-[#71717a] hover:text-[#e4e4e7]">
+                        Редактор данных
+                    </button>
+                </div>
+
+                <!-- Hidden by default editor -->
+                <div id="editor-wrap" class="hidden mb-2">
+                    <textarea id="data-area" rows="4" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg p-2 font-mono text-xs text-[#34d399] focus:outline-none focus:border-[#3b82f6] no-scrollbar"></textarea>
+                    <button onclick="applyEditor()" class="mt-1 text-[11px] text-[#34d399] hover:underline font-medium">Применить</button>
+                </div>
+
+                <!-- Clean Results Table -->
+                <div class="flex-1 overflow-y-auto no-scrollbar border border-[#1e1e22] rounded-lg bg-[#070708] p-2.5 text-xs font-mono">
+                    <table class="w-full text-left">
+                        <thead class="text-[#71717a] border-b border-[#18181b]">
+                            <tr>
+                                <th class="pb-1.5 w-5">#</th>
+                                <th class="pb-1.5">Исходный</th>
+                                <th class="pb-1.5 text-right">Результат</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+
+                <button onclick="runClip()" class="btn-emerald w-full h-[36px] rounded-lg text-xs font-medium mt-3 shrink-0">
+                    Выполнить отсечение
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let scale = 8;
+        let originX = 0, originY = 0;
+        let isDragging = false, startX = 0, startY = 0;
+        let currentAlgo = 'midpoint';
+
+        let segments = [];
+        let windowBounds = { xmin: 0, ymin: 0, xmax: 20, ymax: 20 };
+        let polygon = null;
+        let results = [];
+
+        const SAMPLES = {
+            basic: {
+                text: '5\n-15 -15 15 15\n-5 25 25 -5\n2 5 18 5\n-25 0 -5 0\n25 25 35 35\n0 0 20 20',
+                algo: 'midpoint',
+                polygon: null
+            },
+            star: {
+                text: '8\n0 0 20 20\n0 0 20 -20\n0 0 -20 20\n0 0 -20 -20\n0 0 25 0\n0 0 -25 0\n0 0 0 25\n0 0 0 -25\n-10 -10 10 10',
+                algo: 'midpoint',
+                polygon: null
+            },
+            hexagon: {
+                text: '4\n-20 0 20 0\n0 -18 0 18\n-15 -15 15 15\n-12 14 14 -12\n-12 -12 12 12',
+                algo: 'cyrus_beck',
+                polygon: [[-12, 0], [-6, 10.4], [6, 10.4], [12, 0], [6, -10.4], [-6, -10.4]]
+            }
+        };
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            fitToContent();
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function fitToContent() {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+            if (polygon && currentAlgo === 'cyrus_beck') {
+                polygon.forEach(p => {
+                    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+                    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+                });
+            } else if (windowBounds) {
+                minX = Math.min(minX, windowBounds.xmin); maxX = Math.max(maxX, windowBounds.xmax);
+                minY = Math.min(minY, windowBounds.ymin); maxY = Math.max(maxY, windowBounds.ymax);
+            }
+
+            segments.forEach(s => {
+                minX = Math.min(minX, s.x1, s.x2); maxX = Math.max(maxX, s.x1, s.x2);
+                minY = Math.min(minY, s.y1, s.y2); maxY = Math.max(maxY, s.y1, s.y2);
+            });
+
+            if (minX === Infinity) { minX = -15; maxX = 25; minY = -15; maxY = 25; }
+
+            const pad = 4;
+            minX -= pad; maxX += pad;
+            minY -= pad; maxY += pad;
+
+            const spanX = Math.max(1, maxX - minX);
+            const spanY = Math.max(1, maxY - minY);
+
+            const sX = canvas.width / spanX;
+            const sY = canvas.height / spanY;
+            scale = Math.max(3, Math.min(28, Math.min(sX, sY)));
+
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            originX = Math.round(canvas.width / 2 - midX * scale);
+            originY = Math.round(canvas.height / 2 + midY * scale);
+        }
+
+        function toggleEditor() {
+            const ed = document.getElementById('editor-wrap');
+            ed.classList.toggle('hidden');
+            document.getElementById('btn-toggle-ed').textContent = ed.classList.contains('hidden') ? 'Редактор данных' : 'Скрыть';
+        }
+
+        function applyEditor() {
+            parseManual();
+        }
+
+        function setAlgo(algo) {
+            currentAlgo = algo;
+            document.getElementById('btn-algo-midpoint').className = (algo === 'midpoint' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-3 rounded-lg text-xs font-medium';
+            document.getElementById('btn-algo-cyrus').className = (algo === 'cyrus_beck' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-3 rounded-lg text-xs font-medium';
+            runClip();
+        }
+
+        function setActiveSampleBtn(id) {
+            ['btn-sample-basic', 'btn-sample-star', 'btn-sample-hex'].forEach(b => {
+                document.getElementById(b).className = (b === id ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-2.5 rounded-lg text-xs';
+            });
+        }
+
+        function loadSample(key) {
+            const sample = SAMPLES[key];
+            if (!sample) return;
+
+            if (key === 'basic') setActiveSampleBtn('btn-sample-basic');
+            else if (key === 'star') setActiveSampleBtn('btn-sample-star');
+            else if (key === 'hexagon') setActiveSampleBtn('btn-sample-hex');
+
+            polygon = sample.polygon;
+            document.getElementById('data-area').value = sample.text;
+            setAlgo(sample.algo);
+            parseManual();
+        }
+
+        function uploadFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                document.getElementById('data-area').value = ev.target.result;
+                ['btn-sample-basic', 'btn-sample-star', 'btn-sample-hex'].forEach(b => {
+                    document.getElementById(b).className = 'btn-neutral h-[30px] px-2.5 rounded-lg text-xs';
+                });
+                parseManual();
+            };
+            r.readAsText(file);
+        }
+
+        async function parseManual() {
+            const content = document.getElementById('data-area').value;
+            const resp = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                segments = res.data.segments;
+                windowBounds = res.data.window;
+                if (res.data.polygon) {
+                    polygon = res.data.polygon;
+                }
+                fitToContent();
+                runClip();
+            }
+        }
+
+        async function runClip() {
+            const payload = {
+                algorithm: currentAlgo,
+                segments: segments,
+                window: windowBounds,
+                polygon: (currentAlgo === 'cyrus_beck' && polygon) ? polygon : null
+            };
+
+            const resp = await fetch('/api/clip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                results = res.results;
+                renderResults();
+                draw();
+            }
+        }
+
+        function renderResults() {
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = results.map((r, i) => {
+                const orig = `(${r.orig[0][0]}, ${r.orig[0][1]}) → (${r.orig[1][0]}, ${r.orig[1][1]})`;
+                const clip = r.clipped ? `(${r.clipped[0][0]}, ${r.clipped[0][1]}) → (${r.clipped[1][0]}, ${r.clipped[1][1]})` : 'Вне окна';
+                const clipClass = r.clipped ? 'text-[#34d399] font-medium' : 'text-[#71717a]';
+                return `
+                    <tr class="border-b border-[#141417] hover:text-[#f4f4f5]">
+                        <td class="py-1 text-[#52525b]">${i + 1}</td>
+                        <td class="py-1 pr-1 truncate">${orig}</td>
+                        <td class="py-1 text-right whitespace-nowrap ${clipClass}">${clip}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width, h = canvas.height;
+
+            // Grid lines
+            ctx.strokeStyle = '#18181b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const sx = (originX % scale) - scale;
+            const sy = (originY % scale) - scale;
+            for (let x = sx; x <= w + scale; x += scale) {
+                ctx.moveTo(Math.floor(x) + 0.5, 0); ctx.lineTo(Math.floor(x) + 0.5, h);
+            }
+            for (let y = sy; y <= h + scale; y += scale) {
+                ctx.moveTo(0, Math.floor(y) + 0.5); ctx.lineTo(w, Math.floor(y) + 0.5);
+            }
+            ctx.stroke();
+
+            // Axes
+            ctx.strokeStyle = '#3f3f46';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, originY); ctx.lineTo(w, originY);
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, h);
+            ctx.stroke();
+
+            // Axis numbers
+            ctx.fillStyle = '#71717a';
+            ctx.font = '9px monospace';
+            const step = scale > 14 ? 5 : (scale > 7 ? 10 : 20);
+            for (let x = step; originX + x * scale < w; x += step) {
+                ctx.fillText(x, originX + x * scale - 4, originY + 12);
+            }
+            for (let x = -step; originX + x * scale > 0; x -= step) {
+                ctx.fillText(x, originX + x * scale - 6, originY + 12);
+            }
+            for (let y = step; originY - y * scale > 0; y += step) {
+                ctx.fillText(y, originX + 4, originY - y * scale + 3);
+            }
+            for (let y = -step; originY - y * scale < h; y -= step) {
+                ctx.fillText(y, originX + 4, originY - y * scale + 3);
+            }
+
+            // Clipping Area (Window or Polygon)
+            if (currentAlgo === 'cyrus_beck' && polygon && polygon.length >= 3) {
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.14)';
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                polygon.forEach((pt, i) => {
+                    const px = originX + pt[0] * scale;
+                    const py = originY - pt[1] * scale;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else if (windowBounds) {
+                const wx = originX + windowBounds.xmin * scale;
+                const wy = originY - windowBounds.ymax * scale;
+                const ww = (windowBounds.xmax - windowBounds.xmin) * scale;
+                const wh = (windowBounds.ymax - windowBounds.ymin) * scale;
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.14)';
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 1.5;
+                ctx.fillRect(wx, wy, ww, wh);
+                ctx.strokeRect(wx, wy, ww, wh);
+            }
+
+            // Original Segments (Dashed Red)
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            segments.forEach(s => {
+                ctx.beginPath();
+                ctx.moveTo(originX + s.x1 * scale, originY - s.y1 * scale);
+                ctx.lineTo(originX + s.x2 * scale, originY - s.y2 * scale);
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+
+            // Clipped Segments (Bold Emerald Green)
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 2.5;
+            results.forEach(r => {
+                if (r.clipped) {
+                    const c1 = r.clipped[0];
+                    const c2 = r.clipped[1];
+                    const sx1 = originX + c1[0] * scale;
+                    const sy1 = originY - c1[1] * scale;
+                    const sx2 = originX + c2[0] * scale;
+                    const sy2 = originY - c2[1] * scale;
+
+                    ctx.beginPath();
+                    ctx.moveTo(sx1, sy1);
+                    ctx.lineTo(sx2, sy2);
+                    ctx.stroke();
+
+                    // Points at intersections
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(sx1, sy1, 2.5, 0, Math.PI * 2);
+                    ctx.arc(sx2, sy2, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Pan & Zoom
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            startX = e.clientX - originX;
+            startY = e.clientY - originY;
+        });
+        window.addEventListener('mousemove', e => {
+            if (isDragging) {
+                originX = e.clientX - startX;
+                originY = e.clientY - startY;
+                draw();
+            }
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            scale = Math.min(40, Math.max(3, scale * (e.deltaY < 0 ? 1.15 : 0.85)));
+            draw();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            resize();
+            loadSample('basic');
+        });
+    </script>
+</body>
+</html>

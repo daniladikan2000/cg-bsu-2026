@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Базовые растровые алгоритмы | Lab 3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        .btn-sapphire {
+            background: #0f1d38;
+            border: 1px solid #1e3a8a;
+            color: #dbeafe;
+            transition: all 0.15s ease;
+        }
+        .btn-sapphire:hover, .btn-sapphire.active {
+            background: #1e3a8a;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-emerald {
+            background: #06281e;
+            border: 1px solid #064e3b;
+            color: #d1fae5;
+            transition: all 0.15s ease;
+        }
+        .btn-emerald:hover {
+            background: #064e3b;
+            border-color: #059669;
+            color: #ffffff;
+        }
+
+        .btn-neutral {
+            background: #18181b;
+            border: 1px solid #27272a;
+            color: #a1a1aa;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-neutral:hover, .btn-neutral.active {
+            background: #27272a;
+            border-color: #3f3f46;
+            color: #f4f4f5;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#09090b] text-[#e4e4e7] min-h-screen flex items-center justify-center p-6 font-sans">
+
+    <div class="bg-[#121215] border border-[#202024] rounded-2xl shadow-2xl p-8 max-w-4xl w-full">
+        
+        <h1 class="text-2xl font-medium mb-6 text-center tracking-wide text-[#f4f4f5]">
+            Базовые растровые алгоритмы
+        </h1>
+
+        <!-- Toolbar: Presets & Reset -->
+        <div class="h-[46px] flex items-center justify-between gap-3 mb-6 bg-[#0c0c0e] px-3 rounded-xl border border-[#1e1e22]">
+            <div class="flex items-center gap-2 text-xs flex-1 min-w-0">
+                <span class="text-[#71717a] uppercase tracking-wider text-[11px] font-medium shrink-0">Алгоритм:</span>
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                    <button onclick="setAlgo('bresenham')" id="btn-bresenham" class="btn-sapphire active h-[30px] px-3 rounded-lg text-xs">Брезенхем</button>
+                    <button onclick="setAlgo('circle')" id="btn-circle" class="btn-neutral h-[30px] px-3 rounded-lg text-xs">Окружность</button>
+                    <button onclick="setAlgo('dda')" id="btn-dda" class="btn-neutral h-[30px] px-3 rounded-lg text-xs">ЦДА</button>
+                    <button onclick="setAlgo('step')" id="btn-step" class="btn-neutral h-[30px] px-3 rounded-lg text-xs">Пошаговый</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <button onclick="resetDefaults()" title="Сброс к исходным значениям" class="btn-neutral h-[32px] px-3 rounded-lg flex items-center gap-1.5 text-xs text-[#a1a1aa] hover:text-[#f4f4f5]">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Сбросить</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Display: Canvas & Parameters -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
+            
+            <!-- Canvas (7 cols) -->
+            <div class="md:col-span-7 h-[360px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                <span class="text-[#a1a1aa] font-medium uppercase tracking-wider text-[11px]">Дискретная сетка</span>
+
+                <div class="w-full flex-1 mt-3 rounded-lg overflow-hidden relative bg-[#070708] border border-[#18181b] cursor-crosshair">
+                    <canvas id="canvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+
+            <!-- Inputs & Stepper (5 cols) -->
+            <div class="md:col-span-5 h-[360px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                <span class="text-[#a1a1aa] font-medium uppercase tracking-wider text-[11px]">Параметры</span>
+
+                <!-- Line Coordinates -->
+                <div id="line-fields" class="space-y-3 mt-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">X1</span>
+                            <input type="number" id="x1" value="1" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">Y1</span>
+                            <input type="number" id="y1" value="1" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">X2</span>
+                            <input type="number" id="x2" value="14" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">Y2</span>
+                            <input type="number" id="y2" value="7" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Circle Coordinates -->
+                <div id="circle-fields" class="space-y-3 mt-3 hidden">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">Xc</span>
+                            <input type="number" id="xc" value="0" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">Yc</span>
+                            <input type="number" id="yc" value="0" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-[#71717a] block mb-1">Радиус R</span>
+                            <input type="number" id="radius" value="8" min="1" max="40" onchange="run()" class="w-full bg-[#18181b] border border-[#27272a] rounded-lg px-2.5 py-1.5 text-xs text-[#f4f4f5] focus:outline-none focus:border-[#3b82f6]">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trace Log Table -->
+                <div class="flex-1 mt-3 overflow-y-auto no-scrollbar border border-[#1e1e22] rounded-lg bg-[#070708] p-2 text-[11px] font-mono">
+                    <table class="w-full text-left text-[#a1a1aa]">
+                        <thead class="text-[#71717a] border-b border-[#18181b]">
+                            <tr>
+                                <th class="pb-1 w-6">#</th>
+                                <th class="pb-1">x, y</th>
+                                <th class="pb-1 text-right" id="th-extra">Значение</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trace-body"></tbody>
+                    </table>
+                </div>
+
+                <button onclick="run()" class="btn-emerald w-full h-[36px] rounded-lg text-xs font-medium mt-3">
+                    Рассчитать
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let scale = 18;
+        let originX = 0, originY = 0;
+        let isDragging = false, startX = 0, startY = 0;
+        let currentAlgo = 'bresenham';
+        let points = [];
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            originX = Math.round(canvas.width / 2);
+            originY = Math.round(canvas.height / 2);
+            draw();
+        }
+        window.addEventListener('resize', resize);
+
+        function setAlgo(algo) {
+            currentAlgo = algo;
+            document.querySelectorAll('[id^="btn-"]').forEach(b => {
+                b.className = 'btn-neutral h-[30px] px-3 rounded-lg text-xs';
+            });
+            document.getElementById(`btn-${algo}`).className = 'btn-sapphire active h-[30px] px-3 rounded-lg text-xs';
+
+            const th = document.getElementById('th-extra');
+            if (algo === 'bresenham') th.textContent = 'Ошибка err';
+            else if (algo === 'circle') th.textContent = 'Ошибка d';
+            else if (algo === 'step') th.textContent = 'Расчет y';
+            else if (algo === 'dda') th.textContent = 'Инкремент';
+
+            if (algo === 'circle') {
+                document.getElementById('line-fields').classList.add('hidden');
+                document.getElementById('circle-fields').classList.remove('hidden');
+            } else {
+                document.getElementById('line-fields').classList.remove('hidden');
+                document.getElementById('circle-fields').classList.add('hidden');
+            }
+            run();
+        }
+
+        function resetDefaults() {
+            document.getElementById('x1').value = 1;
+            document.getElementById('y1').value = 1;
+            document.getElementById('x2').value = 14;
+            document.getElementById('y2').value = 7;
+            document.getElementById('xc').value = 0;
+            document.getElementById('yc').value = 0;
+            document.getElementById('radius').value = 8;
+            setAlgo('bresenham');
+        }
+
+        async function run() {
+            const payload = {
+                algorithm: currentAlgo,
+                x1: parseInt(document.getElementById('x1').value) || 0,
+                y1: parseInt(document.getElementById('y1').value) || 0,
+                x2: parseInt(document.getElementById('x2').value) || 0,
+                y2: parseInt(document.getElementById('y2').value) || 0,
+                xc: parseInt(document.getElementById('xc').value) || 0,
+                yc: parseInt(document.getElementById('yc').value) || 0,
+                r: parseInt(document.getElementById('radius').value) || 1
+            };
+
+            const resp = await fetch('/api/rasterize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                points = res.data.points;
+                renderTrace(res.data.trace);
+                draw();
+            }
+        }
+
+        function renderTrace(trace) {
+            const tbody = document.getElementById('trace-body');
+            if (!trace || !trace.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="pt-2 text-center text-[#52525b]">Нет данных</td></tr>';
+                return;
+            }
+            tbody.innerHTML = trace.map(t => `
+                <tr class="hover:text-[#f4f4f5] border-b border-[#141417]">
+                    <td class="py-1 text-[#52525b]">${t.step}</td>
+                    <td class="py-1 text-[#f4f4f5]">(${t.x}, ${t.y})</td>
+                    <td class="py-1 text-right text-[#34d399]">${t.calc || (t.err !== undefined ? `err=${t.err}` : (t.d !== undefined ? `d=${t.d}` : '—'))}</td>
+                </tr>
+            `).join('');
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width, h = canvas.height;
+
+            // Grid
+            ctx.strokeStyle = '#18181b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            const sx = (originX % scale) - scale;
+            const sy = (originY % scale) - scale;
+            for (let x = sx; x <= w + scale; x += scale) {
+                ctx.moveTo(Math.floor(x) + 0.5, 0);
+                ctx.lineTo(Math.floor(x) + 0.5, h);
+            }
+            for (let y = sy; y <= h + scale; y += scale) {
+                ctx.moveTo(0, Math.floor(y) + 0.5);
+                ctx.lineTo(w, Math.floor(y) + 0.5);
+            }
+            ctx.stroke();
+
+            // Axes
+            ctx.strokeStyle = '#3f3f46';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, originY); ctx.lineTo(w, originY);
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, h);
+            ctx.stroke();
+
+            // Pixels & Center Dots
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 1;
+            for (const [px, py] of points) {
+                const screenX = originX + px * scale;
+                const screenY = originY - (py + 1) * scale;
+                ctx.fillRect(screenX, screenY, scale, scale);
+                ctx.strokeRect(screenX + 0.5, screenY + 0.5, scale - 1, scale - 1);
+
+                // Distinct point dot at pixel center
+                ctx.fillStyle = '#bfdbfe';
+                ctx.beginPath();
+                ctx.arc(screenX + scale / 2, screenY + scale / 2, Math.max(1.5, scale * 0.1), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';
+            }
+
+            // Continuous ideal line / circle
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            if (currentAlgo === 'circle') {
+                const xc = parseInt(document.getElementById('xc').value) || 0;
+                const yc = parseInt(document.getElementById('yc').value) || 0;
+                const r = parseInt(document.getElementById('radius').value) || 8;
+                ctx.arc(originX + (xc + 0.5) * scale, originY - (yc + 0.5) * scale, r * scale, 0, Math.PI * 2);
+            } else {
+                const x1 = parseInt(document.getElementById('x1').value) || 0;
+                const y1 = parseInt(document.getElementById('y1').value) || 0;
+                const x2 = parseInt(document.getElementById('x2').value) || 0;
+                const y2 = parseInt(document.getElementById('y2').value) || 0;
+                ctx.moveTo(originX + (x1 + 0.5) * scale, originY - (y1 + 0.5) * scale);
+                ctx.lineTo(originX + (x2 + 0.5) * scale, originY - (y2 + 0.5) * scale);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Endpoint markers (Amber dots)
+            if (currentAlgo !== 'circle') {
+                const x1 = parseInt(document.getElementById('x1').value) || 0;
+                const y1 = parseInt(document.getElementById('y1').value) || 0;
+                const x2 = parseInt(document.getElementById('x2').value) || 0;
+                const y2 = parseInt(document.getElementById('y2').value) || 0;
+                [[x1, y1], [x2, y2]].forEach(([px, py]) => {
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(originX + (px + 0.5) * scale, originY - (py + 0.5) * scale, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        // Pan & Zoom
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            startX = e.clientX - originX;
+            startY = e.clientY - originY;
+        });
+        window.addEventListener('mousemove', e => {
+            if (isDragging) {
+                originX = e.clientX - startX;
+                originY = e.clientY - startY;
+                draw();
+            }
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            scale = Math.min(48, Math.max(8, scale * (e.deltaY < 0 ? 1.15 : 0.85)));
+            draw();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            resize();
+            run();
+        });
+    </script>
+</body>
+</html>
