@@ -363,7 +363,12 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             resize();
-            run();
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('algo')) {
+                setAlgo(urlParams.get('algo'));
+            } else {
+                run();
+            }
         });
     </script>
 </body>
