@@ -220,10 +220,15 @@ sup { top: -0.5em; }
                 <i>e</i><sub>0</sub> = 2Δ<i>y</i> - Δ<i>x</i>.
             </div>
             Формула пересчета ошибки и выбора следующего пикселя:
-            <div class="math-block">
-                <i>e</i><sub><i>i</i>+1</sub> = 
-                { <i>e</i><sub><i>i</i></sub> + 2Δ<i>y</i>, &emsp; если <i>e</i><sub><i>i</i></sub> &lt; 0 (шаг <i>x</i>++),<br>
-                &emsp;&emsp;&emsp;&ensp;&nbsp;{ <i>e</i><sub><i>i</i></sub> + 2(Δ<i>y</i> - Δ<i>x</i>), &emsp; если <i>e</i><sub><i>i</i></sub> ≥ 0 (шаг <i>x</i>++, <i>y</i>++).
+            <div class="math-block" style="display: flex; align-items: center; justify-content: center; margin: 4px 0;">
+                <span style="margin-right: 6px;"><i>e</i><sub><i>i</i>+1</sub> =</span>
+                <svg width="8" height="38" viewBox="0 0 8 38" style="display: block;">
+                    <path d="M 7,1 C 3,1 2,4 2,9 L 2,15 C 2,18 1,19 0,19 C 1,19 2,20 2,23 L 2,29 C 2,34 3,37 7,37" fill="none" stroke="#000" stroke-width="1.1" stroke-linecap="round"/>
+                </svg>
+                <div style="display: flex; flex-direction: column; text-align: left; margin-left: 6px; line-height: 1.55;">
+                    <div><i>e</i><sub><i>i</i></sub> + 2Δ<i>y</i>, &emsp; если <i>e</i><sub><i>i</i></sub> &lt; 0 (шаг <i>x</i>++),</div>
+                    <div><i>e</i><sub><i>i</i></sub> + 2(Δ<i>y</i> - Δ<i>x</i>), &emsp; если <i>e</i><sub><i>i</i></sub> ≥ 0 (шаг <i>x</i>++, <i>y</i>++).</div>
+                </div>
             </div>
             Все операции выполняются строго в целых числах без операций деления и вещественного типа данных.
         </li>
@@ -233,10 +238,15 @@ sup { top: -0.5em; }
                 <i>d</i><sub>0</sub> = 3 - 2<i>R</i>.
             </div>
             Итерационный пересчет:
-            <div class="math-block">
-                <i>d</i><sub><i>i</i>+1</sub> = 
-                { <i>d</i><sub><i>i</i></sub> + 4<i>x</i><sub><i>i</i></sub> + 6, &emsp; если <i>d</i><sub><i>i</i></sub> &lt; 0 (шаг вправо: <i>x</i>++),<br>
-                &emsp;&emsp;&emsp;&ensp;&nbsp;{ <i>d</i><sub><i>i</i></sub> + 4(<i>x</i><sub><i>i</i></sub> - <i>y</i><sub><i>i</i></sub>) + 10, &emsp; если <i>d</i><sub><i>i</i></sub> ≥ 0 (шаг по диагонали: <i>x</i>++, <i>y</i>--).
+            <div class="math-block" style="display: flex; align-items: center; justify-content: center; margin: 4px 0;">
+                <span style="margin-right: 6px;"><i>d</i><sub><i>i</i>+1</sub> =</span>
+                <svg width="8" height="38" viewBox="0 0 8 38" style="display: block;">
+                    <path d="M 7,1 C 3,1 2,4 2,9 L 2,15 C 2,18 1,19 0,19 C 1,19 2,20 2,23 L 2,29 C 2,34 3,37 7,37" fill="none" stroke="#000" stroke-width="1.1" stroke-linecap="round"/>
+                </svg>
+                <div style="display: flex; flex-direction: column; text-align: left; margin-left: 6px; line-height: 1.55;">
+                    <div><i>d</i><sub><i>i</i></sub> + 4<i>x</i><sub><i>i</i></sub> + 6, &emsp; если <i>d</i><sub><i>i</i></sub> &lt; 0 (шаг вправо: <i>x</i>++),</div>
+                    <div><i>d</i><sub><i>i</i></sub> + 4(<i>x</i><sub><i>i</i></sub> - <i>y</i><sub><i>i</i></sub>) + 10, &emsp; если <i>d</i><sub><i>i</i></sub> ≥ 0 (шаг по диагонали: <i>x</i>++, <i>y</i>--).</div>
+                </div>
             </div>
             Остальные 7 октантов формируются синхронным отражением: (±<i>x</i>, ±<i>y</i>) и (±<i>y</i>, ±<i>x</i>).
         </li>
@@ -297,7 +307,7 @@ sup { top: -0.5em; }
             <tr>
                 <td><strong>Пошаговый алгоритм</strong></td>
                 <td><strong>22.7 мс</strong></td>
-                <td>Медленнее в 2 раза из-за вычисления <i>y</i> = <i>k</i><i>x</i> + <i>b</i> (умножение float) на каждом шаге.</td>
+                <td>Арифметика с плавающей точкой (float) и вызов функции <code>round()</code> на каждом шаге.</td>
             </tr>
             <tr>
                 <td><strong>Алгоритм ЦДА</strong></td>
@@ -307,7 +317,7 @@ sup { top: -0.5em; }
         </tbody>
     </table>
     <p>
-        <strong>Точность растра:</strong> все три алгоритма аппроксимируют отрезок с отклонением центра пикселя от идеальной линии менее 0.5 пикселя. Редкие расхождения в пикселях (около 18% случаев) возникают только тогда, когда линия проходит точно посередине между двумя пикселями (при значении 0.5), где Брезенхем выбирает верхний пиксель, а функция <code>round()</code> в Python округляет к ближайшему четному числу.
+        <strong>Точность растра:</strong> все три алгоритма аппроксимируют отрезок с максимальным отклонением центра пикселя от непрерывной прямой не более 0.5000 пикселя (среднее отклонение составляет 0.2441 пикселя, а среднее евклидово расстояние — 0.2205 пикселя). Все методы дают свыше 99.4% идентичных пикселей. Редкие расхождения (менее 0.6% случаев) возникают только тогда, когда линия проходит точно посередине между двумя пикселями (при значении 0.5), где Брезенхем выбирает верхний пиксель, а функция <code>round()</code> в Python округляет к ближайшему четному числу.
     </p>
 
     <h2 class="sec-title">5. Выводы</h2>
