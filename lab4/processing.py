@@ -1,7 +1,6 @@
 import math
 from typing import List, Dict, Any
 
-# Outcodes
 INSIDE = 0
 LEFT   = 1
 RIGHT  = 2
@@ -19,7 +18,8 @@ def get_code(x: float, y: float, xmin: float, ymin: float, xmax: float, ymax: fl
 
 
 def clip_midpoint(x1: float, y1: float, x2: float, y2: float,
-                  xmin: float, ymin: float, xmax: float, ymax: float, eps: float = 1e-3) -> Dict[str, Any]:
+                  xmin: float, ymin: float, xmax: float, ymax: float,
+                  eps: float = 1e-3) -> Dict[str, Any]:
     c1 = get_code(x1, y1, xmin, ymin, xmax, ymax)
     c2 = get_code(x2, y2, xmin, ymin, xmax, ymax)
 
@@ -28,7 +28,6 @@ def clip_midpoint(x1: float, y1: float, x2: float, y2: float,
     if (c1 & c2) != 0:
         return {"status": "outside", "clipped": None}
 
-    # Поиск первой границы
     p1 = [x1, y1]
     if c1 != INSIDE:
         a, b = [x1, y1], [x2, y2]
@@ -40,7 +39,6 @@ def clip_midpoint(x1: float, y1: float, x2: float, y2: float,
                 b = m
         p1 = b
 
-    # Поиск второй границы
     p2 = [x2, y2]
     if c2 != INSIDE:
         a, b = [p1[0], p1[1]], [x2, y2]
@@ -51,6 +49,9 @@ def clip_midpoint(x1: float, y1: float, x2: float, y2: float,
             else:
                 a = m
         p2 = a
+
+    if get_code(p1[0], p1[1], xmin, ymin, xmax, ymax) != INSIDE or get_code(p2[0], p2[1], xmin, ymin, xmax, ymax) != INSIDE:
+        return {"status": "outside", "clipped": None}
 
     return {
         "status": "clipped",
@@ -64,7 +65,6 @@ def clip_cyrus_beck(x1: float, y1: float, x2: float, y2: float,
     if n < 3:
         return {"status": "outside", "clipped": None}
 
-    # Гарантируем ориентацию против часовой стрелки (CCW)
     area = 0.0
     for i in range(n):
         j = (i + 1) % n

@@ -1,7 +1,6 @@
 import os
 import sys
 
-# Ensure current directory is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, render_template, request, jsonify
