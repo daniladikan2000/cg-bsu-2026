@@ -1,6 +1,7 @@
 import base64
 import io
 import math
+import os
 from typing import Any, Dict, List, Tuple
 
 from PIL import Image, ImageDraw
@@ -236,7 +237,7 @@ def _pil_to_data_url(img: Image.Image) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-def generate_procedural_texture(key: str, size: int = 256) -> str:
+def generate_procedural_texture_image(key: str, size: int = 256) -> Image.Image:
     img = Image.new("RGB", (size, size))
     pixels: List[Tuple[int, int, int]] = []
 
@@ -300,7 +301,52 @@ def generate_procedural_texture(key: str, size: int = 256) -> str:
             for gy in range(0, size, step):
                 draw.rectangle([gx, gy, gx + 4, gy + 4], fill=(96, 165, 250))
 
-    return _pil_to_data_url(img)
+    return img
+
+
+def generate_procedural_texture(key: str, size: int = 256) -> str:
+    return _pil_to_data_url(generate_procedural_texture_image(key, size=size))
+
+
+def ensure_default_textures(textures_dir: str, size: int = 256) -> None:
+    os.makedirs(textures_dir, exist_ok=True)
+    for key in TEXTURE_NAMES:
+        path = os.path.join(textures_dir, f"{key}.png")
+        if not os.path.exists(path):
+            generate_procedural_texture_image(key, size=size).save(path, format="PNG")
+
+
+def load_textures_from_dir(textures_dir: str) -> List[Dict[str, str]]:
+    ensure_default_textures(textures_dir)
+    allowed = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
+    result: List[Dict[str, str]] = []
+    seen = set()
+
+    ordered_files = [f"{k}.png" for k in TEXTURE_NAMES] + sorted(os.listdir(textures_dir))
+    for fname in ordered_files:
+        if fname in seen:
+            continue
+        ext = os.path.splitext(fname.lower())[1]
+        if ext not in allowed:
+            continue
+        path = os.path.join(textures_dir, fname)
+        if not os.path.isfile(path):
+            continue
+        seen.add(fname)
+        stem = os.path.splitext(fname)[0]
+        label = TEXTURE_NAMES.get(stem, stem)
+        with open(path, "rb") as f:
+            img = Image.open(io.BytesIO(f.read())).convert("RGB")
+        w, h = img.size
+        if w != h or (w & (w - 1)) != 0:
+            img = img.resize((512, 512), Image.Resampling.LANCZOS)
+        result.append({
+            "key": stem,
+            "name": label,
+            "filename": fname,
+            "data_url": _pil_to_data_url(img),
+        })
+    return result
 
 
 def process_uploaded_texture(file_bytes: bytes, target_size: int = 512) -> str:

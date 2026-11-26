@@ -3,23 +3,20 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from processing import (
-    TEXTURE_NAMES,
     build_dikan_mesh,
     compute_transformation,
-    generate_procedural_texture,
+    load_textures_from_dir,
     process_uploaded_texture,
 )
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+TEXTURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "textures")
 _MESH = build_dikan_mesh()
-_TEXTURES = {
-    key: generate_procedural_texture(key, size=256)
-    for key in TEXTURE_NAMES
-}
+_TEXTURES = load_textures_from_dir(TEXTURES_DIR)
 
 
 @app.route("/")
@@ -32,11 +29,13 @@ def api_mesh():
     return jsonify({
         "status": "success",
         "mesh": _MESH,
-        "textures": [
-            {"key": k, "name": label, "data_url": _TEXTURES[k]}
-            for k, label in TEXTURE_NAMES.items()
-        ],
+        "textures": _TEXTURES,
     })
+
+
+@app.route("/api/textures/<filename>", methods=["GET"])
+def api_texture_file(filename):
+    return send_from_directory(TEXTURES_DIR, filename)
 
 
 @app.route("/api/transform", methods=["POST"])
