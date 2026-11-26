@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D-объект с текстурой — ДИКАН</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        button:focus,
+        button:focus-visible,
+        input:focus,
+        input:focus-visible {
+            outline: none;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #27272a;
+            border-radius: 9999px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: #27272a;
+            border-radius: 9999px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 14px;
+            width: 14px;
+            margin-top: -5px;
+            border-radius: 9999px;
+            background: #dbeafe;
+            border: 2px solid #2563eb;
+            cursor: pointer;
+            transition: transform 0.12s ease, background 0.12s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: #ffffff;
+            transform: scale(1.12);
+        }
+        input[type="range"]::-moz-range-track {
+            height: 4px;
+            background: #27272a;
+            border-radius: 9999px;
+        }
+        input[type="range"]::-moz-range-thumb {
+            height: 14px;
+            width: 14px;
+            border-radius: 9999px;
+            background: #dbeafe;
+            border: 2px solid #2563eb;
+            cursor: pointer;
+        }
+
+        .btn-sapphire {
+            background: #0f1d38;
+            border: 1px solid #1e3a8a;
+            color: #dbeafe;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-sapphire:hover, .btn-sapphire.active {
+            background: #1e3a8a;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-emerald {
+            background: #06281e;
+            border: 1px solid #064e3b;
+            color: #d1fae5;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-emerald:hover {
+            background: #064e3b;
+            border-color: #059669;
+            color: #ffffff;
+        }
+
+        .btn-neutral {
+            background: #18181b;
+            border: 1px solid #27272a;
+            color: #a1a1aa;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .btn-neutral:hover, .btn-neutral.active {
+            background: #27272a;
+            border-color: #3f3f46;
+            color: #f4f4f5;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#09090b] text-[#e4e4e7] min-h-screen flex items-center justify-center p-4 sm:p-6 font-sans">
+
+    <div class="bg-[#121215] border border-[#202024] rounded-2xl shadow-2xl p-6 max-w-[1080px] w-full">
+
+        <!-- Верхняя панель инструментов -->
+        <div class="min-h-[46px] flex flex-wrap items-center justify-between gap-2 mb-5 bg-[#0c0c0e] px-3 py-1.5 rounded-xl border border-[#1e1e22]">
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[#71717a] uppercase tracking-wider text-[11px] font-medium mr-1">Текстура:</span>
+                <div id="texture-buttons" class="flex flex-wrap items-center gap-1.5"></div>
+                <label class="btn-neutral h-[30px] px-2.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    <span>Своя</span>
+                    <input type="file" id="tex-upload" class="hidden" accept=".png,.jpg,.jpeg,.bmp,.webp" onchange="uploadTexture(event)">
+                </label>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button onclick="setProjection('perspective')" id="btn-persp" class="btn-sapphire active h-[30px] px-3 rounded-lg text-xs font-medium">Перспектива</button>
+                <button onclick="setProjection('ortho')" id="btn-ortho" class="btn-neutral h-[30px] px-3 rounded-lg text-xs font-medium">Ортография</button>
+                <div class="w-px h-4 bg-[#27272a] mx-0.5"></div>
+                <button onclick="toggleWire()" id="btn-wire" class="btn-neutral h-[30px] px-2.5 rounded-lg text-xs">Каркас</button>
+                <button onclick="toggleAxes()" id="btn-axes" class="btn-sapphire active h-[30px] px-2.5 rounded-lg text-xs">Оси</button>
+                <button onclick="resetTransforms()" class="btn-neutral h-[30px] px-2.5 rounded-lg text-xs">Сбросить</button>
+            </div>
+        </div>
+
+        <!-- Основная горизонтальная область: слева широкая 3D-сцена, справа матрица и массив вершин -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mb-5">
+
+            <!-- 3D-сцена -->
+            <div class="md:col-span-7 h-[330px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-[11px] mb-2.5 shrink-0">
+                    <span class="text-[#a1a1aa] font-medium uppercase tracking-wider">3D-сцена</span>
+                    <span id="texture-badge" class="font-mono text-[#34d399]"></span>
+                </div>
+
+                <div id="viewport-wrap" class="relative w-full flex-1 min-h-0 rounded-lg overflow-hidden bg-[#070708] border border-[#18181b] select-none">
+                    <canvas id="gl-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+                    <canvas id="hud-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+                </div>
+            </div>
+
+            <!-- Матрица 4x4 и Массив вершин -->
+            <div class="md:col-span-5 h-[330px] bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-2.5 shrink-0">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="setTab('matrix')" id="tab-matrix-btn" class="btn-sapphire active h-[28px] px-3 rounded-lg text-xs font-medium">Матрица 4×4</button>
+                        <button onclick="setTab('vertices')" id="tab-verts-btn" class="btn-neutral h-[28px] px-3 rounded-lg text-xs font-medium">Вершины</button>
+                    </div>
+                    <button onclick="copyMatrix()" id="btn-copy" class="btn-neutral h-[28px] px-2.5 rounded-lg text-xs">Копировать</button>
+                </div>
+
+                <div id="tab-matrix" class="flex-1 min-h-0 bg-[#070708] border border-[#18181b] rounded-lg p-4 flex flex-col justify-between font-mono">
+                    <div class="text-[#71717a] text-xs">
+                        M = T · Rz · Ry · Rx · S
+                    </div>
+                    <div id="matrix-grid" class="grid grid-cols-4 gap-x-3 gap-y-2 text-right tabular-nums text-sm text-[#e4e4e7] my-auto"></div>
+                    <div class="flex items-center justify-between text-[11px] text-[#71717a] pt-2 border-t border-[#141417]">
+                        <span>v' = M · [x, y, z, 1]ᵀ</span>
+                        <span class="text-[#34d399]">tx, ty, tz</span>
+                    </div>
+                </div>
+
+                <div id="tab-vertices" class="hidden flex-1 min-h-0 overflow-y-auto no-scrollbar bg-[#070708] border border-[#18181b] rounded-lg p-2.5 font-mono text-[10.5px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="text-[#71717a] border-b border-[#18181b] sticky top-0 bg-[#070708]">
+                            <tr>
+                                <th class="pb-1.5 w-7">#</th>
+                                <th class="pb-1.5">X, Y, Z</th>
+                                <th class="pb-1.5 text-right">X', Y', Z'</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vertices-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Нижний горизонтальный ряд преобразований -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4">
+                <div class="text-[11px] uppercase tracking-wider text-[#a1a1aa] font-medium mb-3">Поворот (°)</div>
+                <div id="sliders-rotate" class="space-y-2.5"></div>
+            </div>
+            <div class="bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4">
+                <div class="text-[11px] uppercase tracking-wider text-[#a1a1aa] font-medium mb-3">Перенос (сдвиг)</div>
+                <div id="sliders-translate" class="space-y-2.5"></div>
+            </div>
+            <div class="bg-[#0c0c0e] border border-[#1e1e22] rounded-xl p-4">
+                <div class="text-[11px] uppercase tracking-wider text-[#a1a1aa] font-medium mb-3">Масштаб</div>
+                <div id="sliders-scale" class="space-y-2.5"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const DEFAULT_POSE = { rx: 18, ry: -24, rz: 0, tx: 0, ty: 0, tz: 0, sx: 1, sy: 1, sz: 1 };
+        const state = {
+            projection: 'perspective',
+            tab: 'matrix',
+            wireframe: false,
+            axes: true,
+            ...DEFAULT_POSE,
+        };
+
+        const SLIDERS = [
+            { group: 'rotate', key: 'rx', label: 'Rx', min: -180, max: 180, step: 1 },
+            { group: 'rotate', key: 'ry', label: 'Ry', min: -180, max: 180, step: 1 },
+            { group: 'rotate', key: 'rz', label: 'Rz', min: -180, max: 180, step: 1 },
+            { group: 'translate', key: 'tx', label: 'Tx', min: -12, max: 12, step: 0.1 },
+            { group: 'translate', key: 'ty', label: 'Ty', min: -8, max: 8, step: 0.1 },
+            { group: 'translate', key: 'tz', label: 'Tz', min: -12, max: 12, step: 0.1 },
+            { group: 'scale', key: 'sx', label: 'Sx', min: 0.2, max: 2.2, step: 0.05 },
+            { group: 'scale', key: 'sy', label: 'Sy', min: 0.2, max: 2.2, step: 0.05 },
+            { group: 'scale', key: 'sz', label: 'Sz', min: 0.2, max: 3.0, step: 0.05 },
+        ];
+
+        let meshData = null;
+        let texturesList = [];
+        let currentTextureKey = 'wood';
+        let currentTextureName = 'Дерево';
+        let currentMatrix = null;
+        let transformedVertices = [];
+        let syncTimer = null;
+        let lastSyncSeq = 0;
+
+        function mat4Mul(a, b) {
+            const r = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+            for (let i = 0; i < 4; i++)
+                for (let j = 0; j < 4; j++)
+                    r[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j] + a[i][3]*b[3][j];
+            return r;
+        }
+        function mat4Scale(sx, sy, sz) { return [[sx,0,0,0],[0,sy,0,0],[0,0,sz,0],[0,0,0,1]]; }
+        function mat4Translate(tx, ty, tz) { return [[1,0,0,tx],[0,1,0,ty],[0,0,1,tz],[0,0,0,1]]; }
+        function mat4RotateX(deg) { const r = deg*Math.PI/180, c = Math.cos(r), s = Math.sin(r); return [[1,0,0,0],[0,c,-s,0],[0,s,c,0],[0,0,0,1]]; }
+        function mat4RotateY(deg) { const r = deg*Math.PI/180, c = Math.cos(r), s = Math.sin(r); return [[c,0,s,0],[0,1,0,0],[-s,0,c,0],[0,0,0,1]]; }
+        function mat4RotateZ(deg) { const r = deg*Math.PI/180, c = Math.cos(r), s = Math.sin(r); return [[c,-s,0,0],[s,c,0,0],[0,0,1,0],[0,0,0,1]]; }
+
+        function mat4Perspective(fov, aspect, near, far) {
+            const f = 1 / Math.tan(fov / 2), nf = 1 / (near - far);
+            return [[f/aspect,0,0,0],[0,f,0,0],[0,0,(far+near)*nf,2*far*near*nf],[0,0,-1,0]];
+        }
+        function mat4Ortho(l, r, b, t, n, f) {
+            const lr = 1/(l-r), bt = 1/(b-t), nf = 1/(n-f);
+            return [[-2*lr,0,0,(l+r)*lr],[0,-2*bt,0,(t+b)*bt],[0,0,2*nf,(f+n)*nf],[0,0,0,1]];
+        }
+        function toGLMat4(m) {
+            return new Float32Array([
+                m[0][0],m[1][0],m[2][0],m[3][0],
+                m[0][1],m[1][1],m[2][1],m[3][1],
+                m[0][2],m[1][2],m[2][2],m[3][2],
+                m[0][3],m[1][3],m[2][3],m[3][3],
+            ]);
+        }
+        function normalMat3(m) {
+            const a00=m[0][0],a01=m[0][1],a02=m[0][2],a10=m[1][0],a11=m[1][1],a12=m[1][2],a20=m[2][0],a21=m[2][1],a22=m[2][2];
+            const b01=a22*a11-a12*a21, b11=-a22*a10+a12*a20, b21=a21*a10-a11*a20;
+            let det = a00*b01 + a01*b11 + a02*b21;
+            if (Math.abs(det) < 1e-8) return new Float32Array([1,0,0,0,1,0,0,0,1]);
+            det = 1/det;
+            return new Float32Array([
+                b01*det, b11*det, b21*det,
+                (-a22*a01+a02*a21)*det, (a22*a00-a02*a20)*det, (-a21*a00+a01*a20)*det,
+                (a12*a01-a02*a11)*det, (-a12*a00+a02*a10)*det, (a11*a00-a01*a10)*det,
+            ]);
+        }
+        function transformPoint(m, v) {
+            return [
+                m[0][0]*v[0] + m[0][1]*v[1] + m[0][2]*v[2] + m[0][3],
+                m[1][0]*v[0] + m[1][1]*v[1] + m[1][2]*v[2] + m[1][3],
+                m[2][0]*v[0] + m[2][1]*v[1] + m[2][2]*v[2] + m[2][3],
+            ];
+        }
+        function computeModelMatrix() {
+            let m = mat4Mul(mat4RotateX(state.rx), mat4Scale(state.sx, state.sy, state.sz));
+            m = mat4Mul(mat4RotateY(state.ry), m);
+            m = mat4Mul(mat4RotateZ(state.rz), m);
+            return mat4Mul(mat4Translate(state.tx, state.ty, state.tz), m);
+        }
+
+        function buildSliders() {
+            const containers = {
+                rotate: document.getElementById('sliders-rotate'),
+                translate: document.getElementById('sliders-translate'),
+                scale: document.getElementById('sliders-scale'),
+            };
+            SLIDERS.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'grid grid-cols-[24px_1fr_46px] items-center gap-3 text-xs';
+                row.innerHTML = `
+                    <span class="font-mono text-[#a1a1aa]">${s.label}</span>
+                    <input type="range" id="sl-${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${state[s.key]}">
+                    <span id="val-${s.key}" class="text-right font-mono text-[#f4f4f5] tabular-nums">${state[s.key].toFixed(2)}</span>
+                `;
+                containers[s.group].appendChild(row);
+                row.querySelector(`#sl-${s.key}`).addEventListener('input', e => {
+                    state[s.key] = parseFloat(e.target.value);
+                    document.getElementById(`val-${s.key}`).textContent = state[s.key].toFixed(2);
+                    onTransformChanged();
+                });
+            });
+        }
+
+        function syncSliders() {
+            SLIDERS.forEach(s => {
+                document.getElementById(`sl-${s.key}`).value = state[s.key];
+                document.getElementById(`val-${s.key}`).textContent = state[s.key].toFixed(2);
+            });
+        }
+
+        // --- WebGL ---
+        const glCanvas = document.getElementById('gl-canvas');
+        const hudCanvas = document.getElementById('hud-canvas');
+        const hudCtx = hudCanvas.getContext('2d');
+        const gl = glCanvas.getContext('webgl', { antialias: true, alpha: false });
+        let progMesh = null, progLine = null, meshBufs = null, axisBufs = null, glTex = null;
+
+        const VS_MESH = `
+            attribute vec3 aPosition, aNormal;
+            attribute vec2 aTexCoord;
+            uniform mat4 uModel, uView, uProj;
+            uniform mat3 uNormalMat;
+            varying vec2 vUV;
+            varying vec3 vNorm;
+            void main() {
+                vUV = aTexCoord;
+                vNorm = normalize(uNormalMat * aNormal);
+                gl_Position = uProj * uView * uModel * vec4(aPosition, 1.0);
+            }
+        `;
+        const FS_MESH = `
+            precision mediump float;
+            varying vec2 vUV;
+            varying vec3 vNorm;
+            uniform sampler2D uTex;
+            void main() {
+                vec3 N = normalize(vNorm);
+                if (!gl_FrontFacing) N = -N;
+                float shade = 0.40 + 0.60 * max(dot(N, normalize(vec3(0.36, 0.52, 0.77))), 0.0);
+                gl_FragColor = vec4(min(texture2D(uTex, vUV).rgb * shade, 1.0), 1.0);
+            }
+        `;
+        const VS_LINE = `
+            attribute vec3 aPos, aCol;
+            uniform mat4 uMVP;
+            varying vec3 vCol;
+            void main() { vCol = aCol; gl_Position = uMVP * vec4(aPos, 1.0); }
+        `;
+        const FS_LINE = `
+            precision mediump float;
+            varying vec3 vCol;
+            void main() { gl_FragColor = vec4(vCol, 1.0); }
+        `;
+
+        function createProgram(vs, fs) {
+            const p = gl.createProgram();
+            [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]].forEach(([t, src]) => {
+                const sh = gl.createShader(t);
+                gl.shaderSource(sh, src);
+                gl.compileShader(sh);
+                gl.attachShader(p, sh);
+            });
+            gl.linkProgram(p);
+            return p;
+        }
+
+        function initWebGL() {
+            if (!gl) return;
+            progMesh = createProgram(VS_MESH, FS_MESH);
+            progLine = createProgram(VS_LINE, FS_LINE);
+
+            const axisPos = new Float32Array([0,0,0, 13.5,0,0,  0,0,0, 0,4.6,0,  0,0,0, 0,0,4.5]);
+            const axisCol = new Float32Array([0.94,0.27,0.27, 0.94,0.27,0.27,  0.20,0.83,0.60, 0.20,0.83,0.60,  0.23,0.51,0.96, 0.23,0.51,0.96]);
+            const posBuf = gl.createBuffer(), colBuf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuf); gl.bufferData(gl.ARRAY_BUFFER, axisPos, gl.STATIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, colBuf); gl.bufferData(gl.ARRAY_BUFFER, axisCol, gl.STATIC_DRAW);
+            axisBufs = { posBuf, colBuf };
+
+            glTex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, glTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([180,190,210,255]));
+        }
+
+        function uploadMesh(mesh) {
+            if (!gl) return;
+            const pos = [], norm = [], uv = [], wPos = [], wCol = [];
+            mesh.triangles.forEach(tri => {
+                for (let k = 0; k < 3; k++) {
+                    pos.push(...mesh.vertices[tri.v[k]]);
+                    norm.push(...tri.normal);
+                    uv.push(...tri.uv[k]);
+                }
+            });
+            mesh.edges.forEach(([a, b]) => {
+                wPos.push(...mesh.vertices[a], ...mesh.vertices[b]);
+                wCol.push(0.06,0.75,0.52, 0.06,0.75,0.52);
+            });
+            const mk = arr => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); return b; };
+            meshBufs = { pos: mk(pos), norm: mk(norm), uv: mk(uv), nTris: pos.length / 3, wPos: mk(wPos), wCol: mk(wCol), nWire: wPos.length / 3 };
+        }
+
+        function setGLTexture(dataUrl) {
+            const img = new Image();
+            img.onload = () => {
+                if (gl && glTex) {
+                    gl.bindTexture(gl.TEXTURE_2D, glTex);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                }
+                drawScene();
+            };
+            img.src = dataUrl;
+        }
+
+        function resizeCanvases() {
+            const wrap = document.getElementById('viewport-wrap');
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            glCanvas.width = hudCanvas.width = Math.max(1, Math.floor(wrap.clientWidth * dpr));
+            glCanvas.height = hudCanvas.height = Math.max(1, Math.floor(wrap.clientHeight * dpr));
+            drawScene();
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        function project2D(pv, p) {
+            const cx = pv[0][0]*p[0] + pv[0][1]*p[1] + pv[0][2]*p[2] + pv[0][3];
+            const cy = pv[1][0]*p[0] + pv[1][1]*p[1] + pv[1][2]*p[2] + pv[1][3];
+            const cw = pv[3][0]*p[0] + pv[3][1]*p[1] + pv[3][2]*p[2] + pv[3][3];
+            if (Math.abs(cw) < 1e-6) return null;
+            return [(cx/cw * 0.5 + 0.5) * hudCanvas.width, (0.5 - cy/cw * 0.5) * hudCanvas.height];
+        }
+
+        function drawScene() {
+            if (!meshData || !currentMatrix) return;
+            const w = glCanvas.width, h = glCanvas.height, aspect = w / Math.max(1, h);
+            const camDist = 28.0;
+            const V = mat4Translate(0, 0, -camDist);
+            const halfH = Math.max(7.2, 15.2 / aspect);
+            const halfW = halfH * aspect;
+            const P = state.projection === 'ortho'
+                ? mat4Ortho(-halfW, halfW, -halfH, halfH, 1, 120)
+                : mat4Perspective(2 * Math.atan(halfH / camDist), aspect, 0.5, 140);
+            const PV = mat4Mul(P, V);
+
+            if (!gl) {
+                hudCtx.fillStyle = '#070708';
+                hudCtx.fillRect(0, 0, w, h);
+                return;
+            }
+
+            gl.viewport(0, 0, w, h);
+            gl.clearColor(0.027, 0.027, 0.031, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+
+            if (state.axes && axisBufs) {
+                gl.useProgram(progLine);
+                gl.uniformMatrix4fv(gl.getUniformLocation(progLine, 'uMVP'), false, toGLMat4(PV));
+                const lp = gl.getAttribLocation(progLine, 'aPos'), lc = gl.getAttribLocation(progLine, 'aCol');
+                gl.bindBuffer(gl.ARRAY_BUFFER, axisBufs.posBuf); gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 3, gl.FLOAT, false, 0, 0);
+                gl.bindBuffer(gl.ARRAY_BUFFER, axisBufs.colBuf); gl.enableVertexAttribArray(lc); gl.vertexAttribPointer(lc, 3, gl.FLOAT, false, 0, 0);
+                gl.drawArrays(gl.LINES, 0, 6);
+            }
+
+            if (meshBufs) {
+                gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+                if (state.wireframe) { gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2.0); }
+                gl.useProgram(progMesh);
+                const lp = gl.getAttribLocation(progMesh, 'aPosition');
+                const ln = gl.getAttribLocation(progMesh, 'aNormal');
+                const lu = gl.getAttribLocation(progMesh, 'aTexCoord');
+                gl.bindBuffer(gl.ARRAY_BUFFER, meshBufs.pos); gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 3, gl.FLOAT, false, 0, 0);
+                gl.bindBuffer(gl.ARRAY_BUFFER, meshBufs.norm); gl.enableVertexAttribArray(ln); gl.vertexAttribPointer(ln, 3, gl.FLOAT, false, 0, 0);
+                gl.bindBuffer(gl.ARRAY_BUFFER, meshBufs.uv); gl.enableVertexAttribArray(lu); gl.vertexAttribPointer(lu, 2, gl.FLOAT, false, 0, 0);
+                gl.uniformMatrix4fv(gl.getUniformLocation(progMesh, 'uModel'), false, toGLMat4(currentMatrix));
+                gl.uniformMatrix4fv(gl.getUniformLocation(progMesh, 'uView'), false, toGLMat4(V));
+                gl.uniformMatrix4fv(gl.getUniformLocation(progMesh, 'uProj'), false, toGLMat4(P));
+                gl.uniformMatrix3fv(gl.getUniformLocation(progMesh, 'uNormalMat'), false, normalMat3(currentMatrix));
+                gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, glTex);
+                gl.uniform1i(gl.getUniformLocation(progMesh, 'uTex'), 0);
+                gl.drawArrays(gl.TRIANGLES, 0, meshBufs.nTris);
+                gl.disable(gl.POLYGON_OFFSET_FILL); gl.disable(gl.CULL_FACE);
+
+                if (state.wireframe) {
+                    gl.useProgram(progLine);
+                    gl.uniformMatrix4fv(gl.getUniformLocation(progLine, 'uMVP'), false, toGLMat4(mat4Mul(PV, currentMatrix)));
+                    const wp = gl.getAttribLocation(progLine, 'aPos'), wc = gl.getAttribLocation(progLine, 'aCol');
+                    gl.bindBuffer(gl.ARRAY_BUFFER, meshBufs.wPos); gl.enableVertexAttribArray(wp); gl.vertexAttribPointer(wp, 3, gl.FLOAT, false, 0, 0);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, meshBufs.wCol); gl.enableVertexAttribArray(wc); gl.vertexAttribPointer(wc, 3, gl.FLOAT, false, 0, 0);
+                    gl.drawArrays(gl.LINES, 0, meshBufs.nWire);
+                }
+            }
+
+            hudCtx.clearRect(0, 0, w, h);
+            if (state.axes) {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                hudCtx.font = `600 ${11*dpr}px ui-monospace, monospace`;
+                [[[13.9,0,0],'X','#f87171'], [[0,5.0,0],'Y','#34d399'], [[0,0,4.9],'Z','#60a5fa']].forEach(([pt, txt, col]) => {
+                    const sp = project2D(PV, pt);
+                    if (sp) { hudCtx.fillStyle = col; hudCtx.fillText(txt, sp[0] + 4*dpr, sp[1] + 3*dpr); }
+                });
+            }
+        }
+
+        function renderMatrix(M) {
+            const cells = [];
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const v = M[r][c];
+                    const clean = Math.abs(v) < 0.00005 ? 0 : v;
+                    let cls = 'text-[#71717a]';
+                    if (c === 3 && r < 3 && Math.abs(clean) > 0.0005) cls = 'text-[#34d399] font-medium';
+                    else if (r < 3 && c < 3 && Math.abs(clean) > 0.0005) cls = 'text-[#dbeafe]';
+                    else if (r === 3 && c === 3) cls = 'text-[#a1a1aa]';
+                    cells.push(`<span class="${cls}">${clean.toFixed(3)}</span>`);
+                }
+            }
+            document.getElementById('matrix-grid').innerHTML = cells.join('');
+        }
+
+        function renderVertices() {
+            if (!meshData || state.tab !== 'vertices') return;
+            document.getElementById('vertices-tbody').innerHTML = meshData.vertices.map((o, i) => {
+                const t = transformedVertices[i] || o;
+                return `<tr class="border-b border-[#141417]">
+                    <td class="py-1 pr-1 text-[#52525b]">${i}</td>
+                    <td class="py-1 pr-2 whitespace-nowrap text-[#a1a1aa]">${o[0].toFixed(2)}, ${o[1].toFixed(2)}, ${o[2].toFixed(2)}</td>
+                    <td class="py-1 whitespace-nowrap text-right text-[#34d399]">${t[0].toFixed(2)}, ${t[1].toFixed(2)}, ${t[2].toFixed(2)}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function onTransformChanged(immediate = false) {
+            lastSyncSeq++;
+            currentMatrix = computeModelMatrix();
+            if (meshData) transformedVertices = meshData.vertices.map(v => transformPoint(currentMatrix, v));
+            renderMatrix(currentMatrix);
+            renderVertices();
+            drawScene();
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(syncWithBackend, immediate ? 0 : 90);
+        }
+
+        async function syncWithBackend() {
+            if (!meshData) return;
+            const seq = lastSyncSeq;
+            try {
+                const resp = await fetch('/api/transform', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state),
+                });
+                const res = await resp.json();
+                if (res.status === 'success' && seq === lastSyncSeq) {
+                    currentMatrix = res.data.matrix;
+                    transformedVertices = res.data.transformed_vertices;
+                    renderMatrix(currentMatrix);
+                    renderVertices();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function setProjection(mode) {
+            state.projection = mode;
+            document.getElementById('btn-persp').className = (mode === 'perspective' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-3 rounded-lg text-xs font-medium';
+            document.getElementById('btn-ortho').className = (mode === 'ortho' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-3 rounded-lg text-xs font-medium';
+            drawScene();
+        }
+
+        function toggleWire() {
+            state.wireframe = !state.wireframe;
+            document.getElementById('btn-wire').className = (state.wireframe ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-2.5 rounded-lg text-xs';
+            drawScene();
+        }
+
+        function toggleAxes() {
+            state.axes = !state.axes;
+            document.getElementById('btn-axes').className = (state.axes ? 'btn-sapphire active' : 'btn-neutral') + ' h-[30px] px-2.5 rounded-lg text-xs';
+            drawScene();
+        }
+
+        function setTab(tab) {
+            state.tab = tab;
+            document.getElementById('tab-matrix-btn').className = (tab === 'matrix' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[28px] px-3 rounded-lg text-xs font-medium';
+            document.getElementById('tab-verts-btn').className = (tab === 'vertices' ? 'btn-sapphire active' : 'btn-neutral') + ' h-[28px] px-3 rounded-lg text-xs font-medium';
+            document.getElementById('tab-matrix').classList.toggle('hidden', tab !== 'matrix');
+            document.getElementById('tab-vertices').classList.toggle('hidden', tab !== 'vertices');
+            document.getElementById('btn-copy').classList.toggle('hidden', tab !== 'matrix');
+            renderVertices();
+        }
+
+        function renderTextureButtons() {
+            const box = document.getElementById('texture-buttons');
+            box.innerHTML = texturesList.map(t => {
+                const cls = t.key === currentTextureKey ? 'btn-sapphire active' : 'btn-neutral';
+                return `<button onclick="selectTexture('${t.key}')" class="${cls} h-[30px] px-2.5 rounded-lg text-xs font-medium">${t.name}</button>`;
+            }).join('');
+        }
+
+        function selectTexture(key) {
+            const found = texturesList.find(t => t.key === key);
+            if (!found) return;
+            currentTextureKey = key;
+            currentTextureName = found.name;
+            renderTextureButtons();
+            setGLTexture(found.data_url);
+            updateStatus();
+        }
+
+        async function uploadTexture(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const form = new FormData();
+            form.append('file', file);
+            try {
+                const resp = await fetch('/api/upload-texture', { method: 'POST', body: form });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    const key = `custom_${Date.now()}`;
+                    const shortName = res.name.length > 14 ? res.name.slice(0, 12) + '…' : res.name;
+                    texturesList = texturesList.filter(t => !t.key.startsWith('custom_'));
+                    texturesList.push({ key, name: shortName, data_url: res.data_url });
+                    selectTexture(key);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function resetTransforms() {
+            Object.assign(state, { rx: 0, ry: 0, rz: 0, tx: 0, ty: 0, tz: 0, sx: 1, sy: 1, sz: 1 });
+            syncSliders();
+            onTransformChanged(true);
+        }
+
+        async function copyMatrix() {
+            if (!currentMatrix) return;
+            const txt = 'M = T * Rz * Ry * Rx * S:\n' + currentMatrix.map(r => '[ ' + r.map(v => (Math.abs(v)<5e-5?0:v).toFixed(3).padStart(7)).join('  ') + ' ]').join('\n');
+            try {
+                await navigator.clipboard.writeText(txt);
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = txt;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            }
+            const btn = document.getElementById('btn-copy');
+            btn.textContent = 'Скопировано';
+            setTimeout(() => btn.textContent = 'Копировать', 1000);
+        }
+
+        function updateStatus() {
+            if (!meshData) return;
+            document.getElementById('texture-badge').textContent = `Текстура: ${currentTextureName}`;
+        }
+
+        let dragMode = null, lastX = 0, lastY = 0;
+        glCanvas.addEventListener('contextmenu', e => e.preventDefault());
+        glCanvas.addEventListener('mousedown', e => {
+            dragMode = (e.shiftKey || e.button === 2) ? 'pan' : 'rotate';
+            lastX = e.clientX;
+            lastY = e.clientY;
+        });
+        window.addEventListener('mousemove', e => {
+            if (!dragMode) return;
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (dragMode === 'rotate') {
+                state.ry = ((state.ry + dx * 0.5 + 180) % 360 + 360) % 360 - 180;
+                state.rx = Math.max(-180, Math.min(180, state.rx + dy * 0.5));
+            } else {
+                state.tx = Math.max(-12, Math.min(12, state.tx + dx * 0.04));
+                state.ty = Math.max(-8, Math.min(8, state.ty - dy * 0.04));
+            }
+            syncSliders();
+            onTransformChanged();
+        });
+        window.addEventListener('mouseup', () => {
+            if (dragMode) {
+                dragMode = null;
+                syncWithBackend();
+            }
+        });
+        glCanvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const f = e.deltaY < 0 ? 1.07 : 1 / 1.07;
+            state.sx = Math.max(0.2, Math.min(2.2, state.sx * f));
+            state.sy = Math.max(0.2, Math.min(2.2, state.sy * f));
+            state.sz = Math.max(0.2, Math.min(3.0, state.sz * f));
+            syncSliders();
+            onTransformChanged();
+        }, { passive: false });
+
+        window.onload = async () => {
+            buildSliders();
+            initWebGL();
+            resizeCanvases();
+            const resp = await fetch('/api/mesh');
+            const res = await resp.json();
+            if (res.status === 'success') {
+                meshData = res.mesh;
+                texturesList = res.textures;
+                uploadMesh(meshData);
+                selectTexture('wood');
+                onTransformChanged(true);
+            }
+        };
+    </script>
+</body>
+</html>
